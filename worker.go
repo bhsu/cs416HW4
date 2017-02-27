@@ -24,7 +24,7 @@ var (
 	localaddress      string
 	client            *rpc.Client // RPC client.
 	logger            *log.Logger // Global logger.
-	md5HashValue 	string
+	md5HashValue      string
 )
 
 // Resource server type.
@@ -75,28 +75,25 @@ func main() {
 
 	server_ip_port = args[0]
 	workerport_RPC = splitIpToGetPort(server_ip_port)
-	fmt.Println("workerport_RPC", workerport_RPC)
 	fmt.Println("\nMain funtion: commandline args check server_ip_port: ", server_ip_port, "\n")
 
-	GetOutboundIP() // get local ip
-
+	GetOutboundIP()               // get local ip
 	client = getRPCClientWorker() // Create RPC client for contacting the server.
 	sendWorkerIptoServer(client)  // send local ip to server to store
 
-	go InitServerWorkerUDP()
+	go InitServerWorkerUDP() // start listening for udp from server
 
 	<-done
 }
 
 // fetch the requested page
 func fetchPage(uri string, numberoftimes int) []int {
-	fmt.Println("\nfetchPage called\n")
-	fmt.Println("\nfetchPage uri", uri, "#oftimes", numberoftimes)
+
+	fmt.Println("\nfunc fetchPage uri", uri, "numberoftimes", numberoftimes)
 
 	var diffToInt int
 	// timing the request to uri
 	for i := 0; i < numberoftimes; i++ {
-
 		start := time.Now()
 		// getting the uri response
 		response, err := http.Get(uri)
@@ -106,8 +103,7 @@ func fetchPage(uri string, numberoftimes int) []int {
 			diffToSec := diff.Seconds()
 			diffToSec = diffToSec * 1000
 			diffToInt = int(diffToSec)
-			log.Printf("\nfetchPage took %s", diffToInt)
-			fmt.Println("statuscode:", response.StatusCode)
+			fmt.Println("\nfunc fetchPage took", diffToInt)
 		}
 		if err != nil {
 			fmt.Println(err)
@@ -118,15 +114,11 @@ func fetchPage(uri string, numberoftimes int) []int {
 				fmt.Println(err)
 			}
 		}
-
 		md5HashValue = getMD5Hash(response.Body)
-		fmt.Println("md5hash", md5HashValue)
-
 		measurementsArray = append(measurementsArray, diffToInt)
 	}
 
-	fmt.Println("\nmeasurementsArray", measurementsArray, "\n")
-
+	fmt.Println("\nfunc fetchPage nmeasurementsArray:", measurementsArray, "\n")
 	return measurementsArray
 }
 
@@ -141,14 +133,12 @@ func checkError(msg string, err error, exit bool) {
 
 func computeMin(array []int) int {
 	sort.Ints(array)
-	fmt.Println("\nmin number in array: ", array[0], "\n")
 	return array[0]
 }
 
 func computeMax(array []int) int {
 	sort.Ints(array)
 	i := len(array) - 1
-	fmt.Println("max number in array: ", array[i], "\n")
 	return array[i]
 }
 
@@ -163,7 +153,6 @@ func computeMedian(array []int) int {
 	} else {
 		median = array[middle+1]
 	}
-	fmt.Println("\nmedian number in array: ", median, "\n")
 	return median
 }
 
@@ -178,68 +167,58 @@ func GetOutboundIP() string {
 	localAddr := conn.LocalAddr().String()
 	idx := strings.LastIndex(localAddr, ":")
 	localaddress = localAddr[0:idx]
-	fmt.Println("\nGetOutboundIP:", localaddress, "\n")
+	fmt.Println("\nfunc getlocaladdress:", localaddress, "\n")
 	return localaddress
 }
 
 // Create RPC client for contacting the server.
 func getRPCClientWorker() *rpc.Client {
-	fmt.Println("getRPCClientWorker called")
+
 	raddr, err := net.ResolveTCPAddr("tcp", server_ip_port)
-	fmt.Println("workerport_RPC", workerport_RPC)
-	fmt.Println("server_ip_port", server_ip_port)
-	fmt.Println("raddr", raddr)
-	fmt.Println("server_ip_port", server_ip_port)
+	fmt.Println("\nfunc getRPCClientWorker: workerport_RPC", workerport_RPC)
+	fmt.Println("\nfunc getRPCClientWorker server_ip_port", server_ip_port)
 	if err != nil {
-		fmt.Println("err", err)
-		logger.Fatal(err)
+		checkError("func getRPCClientWorker:", err, false)
 	}
 	conn, err := net.DialTCP("tcp", nil, raddr)
-	fmt.Println("conn", conn)
 	if err != nil {
-		fmt.Println("err", err)
-		logger.Fatal(err)
+		checkError("func getRPCClientWorker:", err, false)
 	}
 	client := rpc.NewClient(conn)
-
 	return client
 }
 
 // sends local ip to server
 func sendWorkerIptoServer(client *rpc.Client) (bool, error) {
-	fmt.Println("\nsendWorkerIptoServer called:\n")
 	var reply bool
 	var err error
-	fmt.Println("\nlocaladdress:", localaddress, "\n")
 	err = client.Call("Worker.ReceiveWorkerIp", localaddress, &reply) // send localaddress to the server to store
-	checkError("", err, false)
-
-	client.Close() // close the client, so we can start listening
-
+	checkError("\nfunc sendWorkerIptoServer:", err, false)
+	client.Close()           // close the client, so we can start listening
 	go InitWorkerServerRPC() // start listening
 	return reply, err
 }
 
 func InitWorkerServerRPC() {
+	fmt.Println("\nfunc InitWorkerServerRPC: start listening for server rpc")
 	wServer := rpc.NewServer()
 	w := new(Worker)
 	wServer.Register(w)
 
 	ip := localaddress + ":" + workerport_RPC
-	fmt.Println("InitWorkerServerRPC ip", ip)
+
 	l, err := net.Listen("tcp", ip)
 	checkError("InitWorkerServerRPC", err, false)
 	for {
-		fmt.Println("for loop")
+		fmt.Println("\nfunc InitWorkerServerRPC: start listening for server rpc")
 		conn, err := l.Accept()
-		checkError("InitWorkerServerRPC", err, false)
+		checkError("\n func InitWorkerServerRPC:", err, false)
 		go wServer.ServeConn(conn)
 	}
 }
 
 func (w *Worker) GetWeb(m MWebsiteReq, reply *WorkerRes) error {
-	fmt.Println("\n getWeb called\n")
-	fmt.Println("\n getWeb uri\n", m.URI)
+
 	array := fetchPage(m.URI, m.SamplesPerWorker)
 	min := computeMin(array)
 	median := computeMedian(array)
@@ -253,46 +232,40 @@ func (w *Worker) GetWeb(m MWebsiteReq, reply *WorkerRes) error {
 		Max:      max,
 		Md5Value: md5HashValue,
 	}
-	fmt.Println("getweb ip,min,median,max:", ip, min, median, max, md5HashValue)
+	fmt.Println("\nfunc GetWeb: ip:", ip, "min:", min, "median:", median, "max:", max, "md5:", md5HashValue)
 	*reply = r
 	return nil
 }
 
 func splitIpToGetPort(ip string) string {
-	fmt.Println("splitIpToGetPort called")
 	s := strings.Split(ip, ":")
 	return s[1]
 }
 
 // initialize worker to listen for server
 func InitServerWorkerUDP() {
-	fmt.Println("InitServerWorkerUDP CALLED localaddress", localaddress+workerport_UDP)
+	fmt.Println("\nfunc InitServerWorkerUDP: start listening for server udp: localaddress is", localaddress+workerport_UDP)
 	udpAddr, err := net.ResolveUDPAddr("udp", localaddress+workerport_UDP)
-	//udpAddr, err := net.ResolveUDPAddr("udp", "128.189.116.114:8080")
-	fmt.Println("InitServerWorkerUDP CALLED udpAddr", udpAddr)
-	checkError("udp1", err, false)
-
+	checkError("\nfunc InitServerWorkerUDP:", err, false)
 	conn, err := net.ListenUDP("udp", udpAddr)
-	checkError("udp2", err, false)
-
+	checkError("\nfunc InitServerWorkerUDP:", err, false)
 	for {
-		handle(conn)
+		handleUDPConn(conn)
 	}
 }
 
-func handle(conn *net.UDPConn) {
-
+func handleUDPConn(conn *net.UDPConn) {
 	var buf [512]byte
-
 	n, addr, err := conn.ReadFromUDP(buf[0:])
 	if err != nil {
 		return
 	}
-	fmt.Println(string(buf[0:n]))
+	fmt.Println("\nfunc handleUDPConn: recevied", string(buf[0:n]))
 
 	if string(buf[0:n]) == "ping" {
 		msg := "pong"
 		conn.WriteToUDP([]byte(msg), addr)
+		fmt.Println("\nfunc handleUDPConn: write pong back to server")
 	}
 
 }
