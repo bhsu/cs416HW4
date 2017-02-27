@@ -78,6 +78,8 @@ func main() {
 	fmt.Println("\nMain funtion: commandline args check server_ip_port: ", server_ip_port, "\n")
 
 	GetOutboundIP()               // get local ip
+	getPublicIp()
+	getexternalIP()
 	client = getRPCClientWorker() // Create RPC client for contacting the server.
 	sendWorkerIptoServer(client)  // send local ip to server to store
 
@@ -278,4 +280,44 @@ func getMD5Hash(file io.ReadCloser) string {
 	hash := md5.Sum([]byte(newStr))
 	return hex.EncodeToString(hash[:])
 
+}
+
+func getPublicIp() string{
+	fmt.Println("getPublicIp called")
+	var lpip string
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		os.Stderr.WriteString("Oops: " + err.Error() + "\n")
+		os.Exit(1)
+	}
+
+	for _, a := range addrs {
+		if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				lpip = ipnet.IP.String()
+				fmt.Println("getPublicIp:",lpip)
+			}
+		}
+	}
+	return lpip
+}
+
+func getexternalIP()string{
+	fmt.Println("getexternalIP called")
+	var exip string
+	resp, err := http.Get("http://myexternalip.com/raw")
+	if err != nil {
+		os.Stderr.WriteString(err.Error())
+		os.Stderr.WriteString("\n")
+		os.Exit(1)
+	}
+	defer resp.Body.Close()
+	//io.Copy(os.Stdout, resp.Body)
+
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(resp.Body)
+	newStr := buf.String()
+	exip = newStr
+	fmt.Println("getexternalIP", exip)
+	return exip
 }
