@@ -23,7 +23,6 @@ var (
 	workerport_RPC    string
 	localaddress      string
 	client            *rpc.Client // RPC client.
-	logger            *log.Logger // Global logger.
 	md5HashValue      string
 )
 
@@ -77,9 +76,8 @@ func main() {
 	workerport_RPC = splitIpToGetPort(server_ip_port)
 	fmt.Println("\nMain funtion: commandline args check server_ip_port: ", server_ip_port, "\n")
 
-	GetOutboundIP()               // get local ip
-	getPublicIp()
-	getexternalIP()
+	//GetOutboundIP()               // get local ip
+	getExternalIp()
 	client = getRPCClientWorker() // Create RPC client for contacting the server.
 	sendWorkerIptoServer(client)  // send local ip to server to store
 
@@ -208,6 +206,7 @@ func InitWorkerServerRPC() {
 	wServer.Register(w)
 
 	ip := localaddress + ":" + workerport_RPC
+	fmt.Println("InitWorkerServerRPC ip", ip)
 
 	l, err := net.Listen("tcp", ip)
 	checkError("InitWorkerServerRPC", err, false)
@@ -282,29 +281,9 @@ func getMD5Hash(file io.ReadCloser) string {
 
 }
 
-func getPublicIp() string{
-	fmt.Println("getPublicIp called")
-	var lpip string
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		os.Stderr.WriteString("Oops: " + err.Error() + "\n")
-		os.Exit(1)
-	}
-
-	for _, a := range addrs {
-		if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-			if ipnet.IP.To4() != nil {
-				lpip = ipnet.IP.String()
-				fmt.Println("getPublicIp:",lpip)
-			}
-		}
-	}
-	return lpip
-}
-
-func getexternalIP()string{
+func getExternalIp(){
 	fmt.Println("getexternalIP called")
-	var exip string
+
 	resp, err := http.Get("http://myexternalip.com/raw")
 	if err != nil {
 		os.Stderr.WriteString(err.Error())
@@ -317,7 +296,7 @@ func getexternalIP()string{
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(resp.Body)
 	newStr := buf.String()
-	exip = newStr
-	fmt.Println("getexternalIP", exip)
-	return exip
+	localaddress = strings.TrimSpace(newStr)
+	fmt.Println("getexternalIP", localaddress)
+
 }
