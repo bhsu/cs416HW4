@@ -205,7 +205,7 @@ func InitWorkerServerRPC() {
 	w := new(Worker)
 	wServer.Register(w)
 
-	ip := localaddress + ":" + workerport_RPC
+	ip := GetOutboundIP() + ":" + workerport_RPC
 	fmt.Println("InitWorkerServerRPC ip", ip)
 
 	l, err := net.Listen("tcp", ip)
@@ -245,8 +245,8 @@ func splitIpToGetPort(ip string) string {
 
 // initialize worker to listen for server
 func InitServerWorkerUDP() {
-	fmt.Println("\nfunc InitServerWorkerUDP: start listening for server udp: localaddress is", localaddress+workerport_UDP)
-	udpAddr, err := net.ResolveUDPAddr("udp", localaddress+workerport_UDP)
+	fmt.Println("\nfunc InitServerWorkerUDP: start listening for server udp: localaddress is", GetOutboundIP()+workerport_UDP)
+	udpAddr, err := net.ResolveUDPAddr("udp", GetOutboundIP()+workerport_UDP)
 	checkError("\nfunc InitServerWorkerUDP:", err, false)
 	conn, err := net.ListenUDP("udp", udpAddr)
 	checkError("\nfunc InitServerWorkerUDP:", err, false)
