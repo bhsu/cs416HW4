@@ -292,7 +292,6 @@ func getExternalIp(){
 	}
 	defer resp.Body.Close()
 	//io.Copy(os.Stdout, resp.Body)
-
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(resp.Body)
 	newStr := buf.String()
